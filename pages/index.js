@@ -841,85 +841,65 @@ function BatchesGrid({ onSelect }) {
   useEffect(() => {
     async function loadBatches() {
       setLoadingLive(true);
-      
-      // Check cache first
-      const cached = localStorage.getItem('pwBatchesCache');
-      const cacheTimestamp = localStorage.getItem('pwBatchesCacheTimestamp');
       const now = Date.now();
-      const CACHE_DURATION = 1 * 60 * 1000; // 1 minute for faster testing
-      
-      if (cached && cacheTimestamp && (now - parseInt(cacheTimestamp)) < CACHE_DURATION) {
-        try {
-          const cachedBatches = JSON.parse(cached);
-          setBatches(cachedBatches);
-          console.log('📦 Loaded batches from cache:', cachedBatches.length);
-          setLoadingLive(false);
-          return;
-        } catch (e) {
-          console.error('Error parsing cached batches:', e);
-        }
-      }
-      
-      // Check if API is configured
+
       try {
         const apiUrl = await getApiUrl();
         setApiConfigured(!!apiUrl);
 
-        // Fetch batches through proxy endpoint
         if (apiUrl) {
-          try {
-            const response = await fetch('/api/proxy/batches');
+          const response = await fetch('/api/proxy/batches');
+          if (response.ok) {
+            const data = await response.json();
+            let rawData = data.data || data; // Handle both {data: ...} and direct response
 
-            if (response.ok) {
-              const data = await response.json();
+            // 1. Try to decrypt if it's a string
+            let finalBatchesData = null;
+            if (typeof rawData === 'string') {
+              const decrypted = await decryptData(rawData);
+              if (decrypted.success) finalBatchesData = decrypted.data;
+            } else {
+              // 2. If it's already an object, use it directly
+              finalBatchesData = rawData;
+            }
 
-              if (data.data) {
-                const decrypted = await decryptData(data.data);
-
-                if (decrypted.success && decrypted.data) {
-                  // Check if data is directly an array or nested in an object
-                  let allBatches = [];
-                  if (Array.isArray(decrypted.data)) {
-                    allBatches = decrypted.data;
-                  } else if (decrypted.data && Array.isArray(decrypted.data.data)) {
-                    allBatches = decrypted.data.data;
-                  } else if (decrypted.data && Array.isArray(decrypted.data.batches)) {
-                    allBatches = decrypted.data.batches;
-                  } else if (decrypted.data && typeof decrypted.data === 'object') {
-                    // Try to find any array inside the object
-                    const possibleArray = Object.values(decrypted.data).find(val => Array.isArray(val));
-                    if (possibleArray) allBatches = possibleArray;
-                  }
-                  
-                  console.log('📚 Total batches found:', allBatches.length);
-                  
-                  // Apply edits from Firebase
-                  const batchesWithEdits = await Promise.all(
-                    allBatches.map(async (batch) => {
-                      const editedBatch = await getBatchWithEdits(batch);
-                      return editedBatch;
-                    })
-                  );
-                  
-                  // Cache the results
-                  localStorage.setItem('pwBatchesCache', JSON.stringify(batchesWithEdits));
-                  localStorage.setItem('pwBatchesCacheTimestamp', now.toString());
-                  
-                  setBatches(batchesWithEdits);
+            if (finalBatchesData) {
+              // 3. Extract the array from any possible nested structure
+              let allBatches = [];
+              if (Array.isArray(finalBatchesData)) {
+                allBatches = finalBatchesData;
+              } else {
+                allBatches = finalBatchesData.data || finalBatchesData.batches || finalBatchesData.items || [];
+                if (allBatches.length === 0 && typeof finalBatchesData === 'object') {
+                  const possibleArray = Object.values(finalBatchesData).find(val => Array.isArray(val));
+                  if (possibleArray) allBatches = possibleArray;
                 }
               }
+
+              console.log('📚 Batches found:', allBatches.length);
+
+              // 4. Load from Firebase Edits
+              const batchesWithEdits = await Promise.all(
+                allBatches.map(async (batch) => {
+                  if (!batch.batchId && batch._id) batch.batchId = batch._id; // Polyfill ID
+                  return await getBatchWithEdits(batch);
+                })
+              );
+
+              setBatches(batchesWithEdits);
+              localStorage.setItem('pwBatchesCache', JSON.stringify(batchesWithEdits));
+              localStorage.setItem('pwBatchesCacheTimestamp', now.toString());
             }
-          } catch (e) {
-            console.error('❌ Error fetching batches:', e);
           }
         }
       } catch (e) {
-        console.error('❌ Error loading API URL:', e);
+        console.error('❌ Error loading batches:', e);
       }
-      
       setLoadingLive(false);
     }
     
+    // Clear cache for this reload to ensure we get fresh data
+    localStorage.removeItem('pwBatchesCache');
     loadBatches();
   }, []);
 
