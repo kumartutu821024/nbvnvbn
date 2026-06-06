@@ -848,25 +848,27 @@ function BatchesGrid({ onSelect }) {
         setApiConfigured(!!apiUrl);
 
         if (apiUrl) {
-          const response = await fetch('/api/allbatches');
+          // Add cache-busting timestamp
+          const response = await fetch('/api/allbatches?t=' + now);
           if (response.ok) {
             const data = await response.json();
 
             let finalBatchesData = null;
 
-            // Handle different response formats
+            // Handle different response formats (Raw Array, Encrypted, or Nested)
             if (Array.isArray(data)) {
               finalBatchesData = data;
-            } else if (data && data.data && typeof data.data === 'string') {
-              // Encrypted format: { data: "..." }
-              const decrypted = await decryptData(data.data);
-              if (decrypted.success) finalBatchesData = decrypted.data;
+            } else if (data && data.data) {
+              if (typeof data.data === 'string') {
+                const decrypted = await decryptData(data.data);
+                if (decrypted.success) finalBatchesData = decrypted.data;
+              } else {
+                finalBatchesData = data.data;
+              }
             } else if (typeof data === 'string') {
-              // Raw encrypted string
               const decrypted = await decryptData(data);
               if (decrypted.success) finalBatchesData = decrypted.data;
             } else {
-              // Regular JSON object
               finalBatchesData = data;
             }
 
