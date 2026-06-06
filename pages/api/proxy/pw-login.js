@@ -1,12 +1,17 @@
-const BASE_URL = 'https://apiserver-all.vercel.app';
+import { getApiUrl } from '../../../lib/apiConfig';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   try {
+    const apiUrl = await getApiUrl();
+    if (!apiUrl) {
+      return res.status(500).json({ success: false, message: 'API not configured in Admin Panel.' });
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
 
-    const response = await fetch(`${BASE_URL}/api/pw/login`, {
+    const response = await fetch(`${apiUrl}/api/pw/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req.body),
