@@ -17,16 +17,25 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: 'API not configured' });
     }
 
-    const targetUrl = `${apiUrl}/api/pw/batches`;
+    // Try allbatches first as it usually contains the full list
+    const targetUrl = `${apiUrl}/api/pw/allbatches`;
     console.log('📡 Fetching from:', targetUrl);
 
     // Fetch from external API
-    const response = await fetch(targetUrl, {
+    let response = await fetch(targetUrl, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
     });
+
+    // Fallback to /batches if /allbatches fails
+    if (!response.ok) {
+      console.log('⚠️ allbatches failed, trying /batches fallback');
+      const fallbackUrl = `${apiUrl}/api/pw/batches`;
+      response = await fetch(fallbackUrl, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
     console.log('📥 Response status:', response.status);
 
