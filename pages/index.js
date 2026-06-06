@@ -848,19 +848,26 @@ function BatchesGrid({ onSelect }) {
         setApiConfigured(!!apiUrl);
 
         if (apiUrl) {
-          const response = await fetch('/api/proxy/batches');
+          const response = await fetch('/api/allbatches');
           if (response.ok) {
             const data = await response.json();
-            let rawData = data.data || data; // Handle both {data: ...} and direct response
 
-            // 1. Try to decrypt if it's a string
             let finalBatchesData = null;
-            if (typeof rawData === 'string') {
-              const decrypted = await decryptData(rawData);
+
+            // Handle different response formats
+            if (Array.isArray(data)) {
+              finalBatchesData = data;
+            } else if (data && data.data && typeof data.data === 'string') {
+              // Encrypted format: { data: "..." }
+              const decrypted = await decryptData(data.data);
+              if (decrypted.success) finalBatchesData = decrypted.data;
+            } else if (typeof data === 'string') {
+              // Raw encrypted string
+              const decrypted = await decryptData(data);
               if (decrypted.success) finalBatchesData = decrypted.data;
             } else {
-              // 2. If it's already an object, use it directly
-              finalBatchesData = rawData;
+              // Regular JSON object
+              finalBatchesData = data;
             }
 
             if (finalBatchesData) {
