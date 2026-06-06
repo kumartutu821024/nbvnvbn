@@ -869,14 +869,22 @@ function BatchesGrid({ onSelect }) {
               if (Array.isArray(finalBatchesData)) {
                 allBatches = finalBatchesData;
               } else {
-                allBatches = finalBatchesData.data || finalBatchesData.batches || finalBatchesData.items || [];
+                // Check all common nested paths
+                allBatches =
+                  finalBatchesData.data ||
+                  finalBatchesData.batches ||
+                  finalBatchesData.allbatches ||
+                  finalBatchesData.items ||
+                  [];
+
+                // If still empty, look for any array property
                 if (allBatches.length === 0 && typeof finalBatchesData === 'object') {
                   const possibleArray = Object.values(finalBatchesData).find(val => Array.isArray(val));
                   if (possibleArray) allBatches = possibleArray;
                 }
               }
 
-              console.log('📚 Batches found:', allBatches.length);
+              console.log('📚 Batches extracted:', allBatches.length);
 
               // 4. Load from Firebase Edits
               const batchesWithEdits = await Promise.all(
