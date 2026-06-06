@@ -803,24 +803,7 @@ function SubjectsView({ batchId, batch, subjects, trail, liveClasses = [] }) {
 // ─── Featured Batches ─────────────────────────────────────────────────────────
 
 // ─── Featured Mission Topper Batches ──────────────────────────────────────────
-const FEATURED_BATCHES = [
-  {
-    batchId: 'SP-JEE-2025',
-    batchName: '⚠️ URGENT: Fake Website Alert - Join Telegram NOW!',
-    batchImage: 'https://i.ibb.co/m53b0YKH/file-00000000d664720997f7f5165cbd5131.png',
-    description: '🚨 Jaldi Telegram join karo varna fake website tumhara data le legi! Official channel pe jao FAST!',
-    isFeatured: true,
-    telegramLink: 'https://t.me/Study_Portalz'
-  },
-  {
-    batchId: 'SP-NEET-2025',
-    batchName: '⚠️ DANGER: Tumhara Data Khatre Me Hai - Telegram Join Karo!',
-    batchImage: 'https://i.ibb.co/m53b0YKH/file-00000000d664720997f7f5165cbd5131.png',
-    description: '🚨 Fake website se bacho! Apna data safe rakho - Study Portal Telegram channel abhi join karo!',
-    isFeatured: true,
-    telegramLink: 'https://t.me/Study_Portalz'
-  }
-];
+const FEATURED_BATCHES = [];
 
 function BatchesGrid({ onSelect }) {
   const router = useRouter();
@@ -1023,19 +1006,24 @@ function BatchesGrid({ onSelect }) {
       )}
 
       {/* Header */}
-      <div className="bg-black border-b border-gray-800 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button onClick={() => setShowSidebar(true)} className="p-2 hover:bg-gray-800 rounded-lg transition text-white">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+          <button onClick={() => setShowSidebar(true)} className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h1 className="text-xl font-bold text-white">Batches</h1>
-          <button className="p-2 hover:bg-gray-800 rounded-lg transition text-white">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold">P</div>
+            <h1 className="text-lg font-bold text-gray-800">Physics Wallah</h1>
+          </div>
+          <div className="ml-auto">
+            <button className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1161,8 +1149,7 @@ function BatchesGrid({ onSelect }) {
       {/* All Batches View */}
       {currentView === 'batches' && (
         <div className="max-w-7xl mx-auto px-4 py-6">
-          {/* Warning Banners */}
-          <BatchWarningBanner />
+          {/* Warning Banners Removed */}
           
           {/* Search Bar */}
           <div className="mb-6">
