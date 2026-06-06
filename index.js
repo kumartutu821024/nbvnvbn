@@ -803,24 +803,7 @@ function SubjectsView({ batchId, batch, subjects, trail, liveClasses = [] }) {
 // ─── Featured Batches ─────────────────────────────────────────────────────────
 
 // ─── Featured Mission Topper Batches ──────────────────────────────────────────
-const FEATURED_BATCHES = [
-  {
-    batchId: 'SP-JEE-2025',
-    batchName: '⚠️ URGENT: Fake Website Alert - Join Telegram NOW!',
-    batchImage: 'https://i.ibb.co/m53b0YKH/file-00000000d664720997f7f5165cbd5131.png',
-    description: '🚨 Jaldi Telegram join karo varna fake website tumhara data le legi! Official channel pe jao FAST!',
-    isFeatured: true,
-    telegramLink: 'https://t.me/Study_Portalz'
-  },
-  {
-    batchId: 'SP-NEET-2025',
-    batchName: '⚠️ DANGER: Tumhara Data Khatre Me Hai - Telegram Join Karo!',
-    batchImage: 'https://i.ibb.co/m53b0YKH/file-00000000d664720997f7f5165cbd5131.png',
-    description: '🚨 Fake website se bacho! Apna data safe rakho - Study Portal Telegram channel abhi join karo!',
-    isFeatured: true,
-    telegramLink: 'https://t.me/Study_Portalz'
-  }
-];
+const FEATURED_BATCHES = [];
 
 function BatchesGrid({ onSelect }) {
   const router = useRouter();
@@ -863,7 +846,7 @@ function BatchesGrid({ onSelect }) {
       const cached = localStorage.getItem('pwBatchesCache');
       const cacheTimestamp = localStorage.getItem('pwBatchesCacheTimestamp');
       const now = Date.now();
-      const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+      const CACHE_DURATION = 1 * 60 * 1000; // 1 minute for faster testing
       
       if (cached && cacheTimestamp && (now - parseInt(cacheTimestamp)) < CACHE_DURATION) {
         try {
@@ -881,53 +864,36 @@ function BatchesGrid({ onSelect }) {
       try {
         const apiUrl = await getApiUrl();
         setApiConfigured(!!apiUrl);
-        console.log('🔗 API URL configured:', apiUrl);
-        
-        // Fetch batches through proxy endpoint (avoids CORS)
+
+        // Fetch batches through proxy endpoint
         if (apiUrl) {
           try {
-            console.log('📡 Fetching batches from proxy...');
             const response = await fetch('/api/proxy/batches');
-            console.log('📥 Proxy response status:', response.status);
-            
+
             if (response.ok) {
               const data = await response.json();
-              console.log('📦 Received data:', data);
-              console.log('📦 Data.data exists:', !!data.data);
-              
+
               if (data.data) {
-                // Decrypt if needed
-                console.log('🔓 Decrypting data...');
                 const decrypted = await decryptData(data.data);
-                console.log('🔓 Decryption result:', decrypted.success ? 'Success' : 'Failed');
-                console.log('🔓 Decrypted data type:', typeof decrypted.data);
-                console.log('🔓 Decrypted data is array:', Array.isArray(decrypted.data));
-                console.log('🔓 Decrypted data keys:', decrypted.data ? Object.keys(decrypted.data) : 'null');
-                console.log('🔓 Decrypted data sample:', decrypted.data);
-                
+
                 if (decrypted.success && decrypted.data) {
                   // Check if data is directly an array or nested in an object
-                  let allBatches = Array.isArray(decrypted.data)
-                    ? decrypted.data
-                    : (decrypted.data.data || decrypted.data.batches || []);
-                  
-                  console.log('📚 Extracted batches array:', Array.isArray(allBatches));
-                  console.log('📚 Total batches before filter:', allBatches.length);
-                  
-                  if (!Array.isArray(allBatches) || allBatches.length === 0) {
-                    console.error('❌ No batches array found in decrypted data');
-                    return;
+                  let allBatches = [];
+                  if (Array.isArray(decrypted.data)) {
+                    allBatches = decrypted.data;
+                  } else if (decrypted.data && Array.isArray(decrypted.data.data)) {
+                    allBatches = decrypted.data.data;
+                  } else if (decrypted.data && Array.isArray(decrypted.data.batches)) {
+                    allBatches = decrypted.data.batches;
+                  } else if (decrypted.data && typeof decrypted.data === 'object') {
+                    // Try to find any array inside the object
+                    const possibleArray = Object.values(decrypted.data).find(val => Array.isArray(val));
+                    if (possibleArray) allBatches = possibleArray;
                   }
                   
-                  // Filter out unwanted batches
-                  const excludeKeywords = ['nsat', 'pw-sat', 'summer camp', 'test series'];
-                  allBatches = allBatches.filter(batch => {
-                    const name = (batch.batchName || '').toLowerCase();
-                    return !excludeKeywords.some(keyword => name.includes(keyword));
-                  });
-                  console.log('📚 Total batches after filter:', allBatches.length);
+                  console.log('📚 Total batches found:', allBatches.length);
                   
-                  // Apply edits from Firebase (only for editing batch names/images, not adding batches)
+                  // Apply edits from Firebase
                   const batchesWithEdits = await Promise.all(
                     allBatches.map(async (batch) => {
                       const editedBatch = await getBatchWithEdits(batch);
@@ -940,21 +906,12 @@ function BatchesGrid({ onSelect }) {
                   localStorage.setItem('pwBatchesCacheTimestamp', now.toString());
                   
                   setBatches(batchesWithEdits);
-                  console.log('✅ Loaded batches from API:', batchesWithEdits.length);
-                } else {
-                  console.error('❌ Decryption failed or data is null');
                 }
-              } else {
-                console.error('❌ No data.data in response');
               }
-            } else {
-              console.error('❌ Proxy response not OK:', response.status);
             }
           } catch (e) {
-            console.error('❌ Error fetching batches from API:', e);
+            console.error('❌ Error fetching batches:', e);
           }
-        } else {
-          console.error('❌ API URL not configured');
         }
       } catch (e) {
         console.error('❌ Error loading API URL:', e);
@@ -967,19 +924,16 @@ function BatchesGrid({ onSelect }) {
   }, []);
 
   const enrolledBatchList = batches.filter(b => enrolledBatches.includes(b.batchId));
-  const [currentView, setCurrentView] = useState('batches'); // batches, todaysStudy, myBatches
+  const [currentView, setCurrentView] = useState('batches');
 
-  // Filter batches based on search query
-  const filteredBatches = batches.filter(batch => 
+  const filteredBatches = batches.filter(batch =>
     (batch.batchName || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
   
-  // Merge featured batches at the top (only if not searching)
-  const allBatchesToDisplay = searchQuery 
+  const allBatchesToDisplay = searchQuery
     ? filteredBatches 
     : [...FEATURED_BATCHES, ...filteredBatches];
   
-  // Show only visibleCount batches unless searching
   const displayedBatches = searchQuery ? filteredBatches : allBatchesToDisplay.slice(0, visibleCount);
 
   return (
@@ -1009,38 +963,32 @@ function BatchesGrid({ onSelect }) {
                 </svg>
                 <span>My Batches</span>
               </button>
-              <button
-                onClick={() => { router.push('/donate'); setShowSidebar(false); }}
-                className="flex items-center gap-3 w-full text-left py-3 hover:bg-white/10 rounded-lg px-3 transition">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                </svg>
-                <span>Donate Batch</span>
-              </button>
             </div>
           </div>
         </div>
       )}
 
       {/* Header */}
-      <div className="bg-black border-b border-gray-800 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <button onClick={() => setShowSidebar(true)} className="p-2 hover:bg-gray-800 rounded-lg transition text-white">
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+          <button onClick={() => setShowSidebar(true)} className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h1 className="text-xl font-bold text-white">Batches</h1>
-          <button className="p-2 hover:bg-gray-800 rounded-lg transition text-white">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white font-bold">P</div>
+            <h1 className="text-lg font-bold text-gray-800">Physics Wallah</h1>
+          </div>
+          <div className="ml-auto">
+            <button className="p-2 hover:bg-gray-100 rounded-lg transition text-gray-600">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
-
-
-
 
       {/* My Batches View */}
       {currentView === 'myBatches' && (
@@ -1064,91 +1012,17 @@ function BatchesGrid({ onSelect }) {
                 return (
                   <div key={batch.batchId}
                     className="group relative bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100">
-                    
-                    {/* Thumbnail */}
-                    {thumbnail ? (
-                      <div className="relative h-40 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
-                        <img 
-                          src={thumbnail} 
-                          alt={batch.batchName}
-                          className="w-full h-full object-cover"
-                          onError={(e) => { e.target.style.display = 'none'; }}
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                        
-                        {/* Mission Topper Logo */}
-                        <div className="absolute top-3 right-3 z-10">
-                          <div className="bg-white rounded-lg shadow-lg p-1.5 flex items-center gap-1.5">
-                            <img 
-                              src="https://i.ibb.co/m53b0YKH/file-00000000d664720997f7f5165cbd5131.png" 
-                              alt="Study Portal"
-                              className="w-6 h-6 object-contain"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                              }}
-                            />
-                            <span className="text-[10px] font-bold text-gray-800">SP</span>
-                          </div>
-                        </div>
-
-                        {/* Warning Banner - Bottom */}
-                        
-                      </div>
-                    ) : (
-                      <div className="relative h-40 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                        <span className="text-6xl">📚</span>
-                        
-                        {/* Mission Topper Logo */}
-                        <div className="absolute top-3 right-3 z-10">
-                          <div className="bg-white rounded-lg shadow-lg p-1.5 flex items-center gap-1.5">
-                            <img 
-                              src="https://i.ibb.co/m53b0YKH/file-00000000d664720997f7f5165cbd5131.png" 
-                              alt="Study Portal"
-                              className="w-6 h-6 object-contain"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                              }}
-                            />
-                            <span className="text-[10px] font-bold text-gray-800">SP</span>
-                          </div>
-                        </div>
-{/* Warning Banner - Bottom */}
-                        
-                      </div>
-                    )}
-                        
-                    
-                    {/* Enrolled Badge */}
-                    <div className="absolute top-3 left-3 z-20 bg-green-500 text-white text-xs px-3 py-1 rounded-full font-bold flex items-center gap-1 shadow-lg">
-                      <span>✓</span> Enrolled
+                    <div className="relative h-40 overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200">
+                      {thumbnail ? (
+                        <img src={thumbnail} alt={batch.batchName} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = 'none'; }} />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-6xl">📚</div>
+                      )}
                     </div>
-                    
-                    {/* Content */}
                     <div className="p-4">
-                      <p className="font-bold text-gray-900 text-base leading-snug line-clamp-2 mb-3">
-                        {batch.batchName}
-                      </p>
-                      
-                      {/* Study Button */}
-                      <button
-                        onClick={() => onSelect(batch.batchId, batch)}
-                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg font-semibold transition flex items-center justify-center gap-2 group/btn mb-2"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                        </svg>
-                        <span>Study</span>
-                        <span className="transform group-hover/btn:translate-x-1 transition-transform">→</span>
-                      </button>
-                      
-                      {/* Unenroll Button */}
-                      <button
-                        onClick={(e) => toggleEnroll(batch.batchId, e)}
-                        className="w-full bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-lg font-semibold transition flex items-center justify-center gap-2"
-                      >
-                        <span>✕</span>
-                        <span>Unenroll</span>
-                      </button>
+                      <p className="font-bold text-gray-900 text-base leading-snug line-clamp-2 mb-3">{batch.batchName}</p>
+                      <button onClick={() => onSelect(batch.batchId, batch)} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg font-semibold transition mb-2">Study</button>
+                      <button onClick={(e) => toggleEnroll(batch.batchId, e)} className="w-full bg-red-50 hover:bg-red-100 text-red-600 py-2 rounded-lg font-semibold transition">Unenroll</button>
                     </div>
                   </div>
                 );
@@ -1161,200 +1035,49 @@ function BatchesGrid({ onSelect }) {
       {/* All Batches View */}
       {currentView === 'batches' && (
         <div className="max-w-7xl mx-auto px-4 py-6">
-          {/* Warning Banners */}
-          <BatchWarningBanner />
-          
-          {/* Search Bar */}
           <div className="mb-6">
             <div className="relative">
               <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => { setSearchQuery(e.target.value); setVisibleCount(15); }}
-                placeholder="Search batches..."
-                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent shadow-sm"
-              />
+              <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search batches..." className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 shadow-sm" />
             </div>
           </div>
           
           {loadingLive ? (
-            <div className="flex justify-center py-16">
-              <div className="w-10 h-10 rounded-full border-[3px] border-indigo-200 border-t-indigo-500 animate-spin" />
-            </div>
+            <Spin />
           ) : filteredBatches.length === 0 ? (
-            <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
-              <div className="text-6xl mb-4">📚</div>
-              <p className="text-gray-600 font-medium mb-2">
-                {searchQuery ? 'No batches found' : 'No batches available'}
-              </p>
-              <p className="text-gray-400 text-sm">
-                {searchQuery ? 'Try a different search term' : 'Batches will appear here once API is configured'}
-              </p>
-            </div>
+            <Empty t={searchQuery ? 'No batches found' : 'No batches available'} />
           ) : (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {displayedBatches.map((batch, idx) => {
+                {displayedBatches.map((batch) => {
                   const thumbnail = batch.batchImage || batch.previewImage || batch.thumbnail;
                   const isEnrolled = enrolledBatches.includes(batch.batchId);
-                  const isTrending = idx < 3 && !batch.isFeatured;
-                  const isFeatured = batch.isFeatured;
-                  
+
                   return (
-                    <div key={batch.batchId}
-                      className={`group bg-white rounded-2xl overflow-hidden border-2 hover:shadow-xl transition-all duration-300 flex flex-col ${
-                        isFeatured ? 'border-yellow-400 shadow-lg shadow-yellow-200' : 'border-gray-200'
-                      }`}>
-                      
-                      {/* Thumbnail with 16:9 aspect ratio */}
-                      <div className="relative">
-                        <div className="aspect-[16/9] w-full bg-gray-100 relative overflow-hidden">
-                          {thumbnail ? (
-                            <img 
-                              src={thumbnail} 
-                              alt={batch.batchName}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                              onError={(e) => { e.target.style.display = 'none'; }}
-                            />
-                          ) : (
-                            <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                              <span className="text-6xl">📚</span>
-                            </div>
-                          )}
-                          
-                          {/* Featured Badge Overlay */}
-                          {isFeatured && (
-                            <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/20 via-orange-400/20 to-red-400/20" />
-                          )}
-                        </div>
-
-                        {/* Mission Topper Logo - Top Left */}
-                        <div className="absolute top-3 left-3 z-10">
-                          <div className={`rounded-lg shadow-lg p-2 flex items-center gap-2 ${
-                            isFeatured ? 'bg-gradient-to-r from-yellow-400 to-orange-500' : 'bg-white'
-                          }`}>
-                            <img 
-                              src="https://i.ibb.co/m53b0YKH/file-00000000d664720997f7f5165cbd5131.png" 
-                              alt="Study Portal"
-                              className="w-8 h-8 object-contain"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.parentElement.innerHTML = '<span class="text-lg">⚡</span>';
-                              }}
-                            />
-                            <span className={`text-xs font-bold ${isFeatured ? 'text-white' : 'text-gray-800'}`}>
-                              Study Portal 
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Featured Star Badge - Top Right */}
-                        {isFeatured && (
-                          <div className="absolute top-3 right-3 z-10 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg animate-pulse">
-                            <span>⭐</span>
-                            <span>FEATURED</span>
-                          </div>
+                    <div key={batch.batchId} className="group bg-white rounded-2xl overflow-hidden border border-gray-200 hover:shadow-xl transition-all flex flex-col">
+                      <div className="aspect-[16/9] w-full bg-gray-100 relative overflow-hidden">
+                        {thumbnail ? (
+                          <img src={thumbnail} alt={batch.batchName} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                        ) : (
+                          <div className="w-full h-full bg-indigo-500 flex items-center justify-center text-6xl">📚</div>
                         )}
-
-                        {/* Trending Badge - Top Right (for non-featured) */}
-                        {isTrending && !isFeatured && (
-                          <div className="absolute top-3 right-3 z-10 bg-gradient-to-r from-orange-500 to-red-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z"/>
-                            </svg>
-                            <span>Trending</span>
-                          </div>
-                        )}
-
-                        {/* Warning Banner - Bottom - Clickable */}
-                        
                       </div>
-                      
-                      {/* Content */}
                       <div className="p-4 flex-grow flex flex-col">
-                        {/* Featured Description */}
-                        {isFeatured && batch.description && (
-                          <div className="mb-2 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-2">
-                            <p className="text-xs text-gray-700 leading-relaxed">{batch.description}</p>
-                          </div>
-                        )}
-                        
-                        <h3 className="text-base font-bold leading-tight mb-3 line-clamp-2 text-gray-900 group-hover:text-indigo-600 transition-colors min-h-[3rem]">
-                          {batch.batchName}
-                        </h3>
-                        
+                        <h3 className="text-base font-bold leading-tight mb-3 line-clamp-2 text-gray-900 min-h-[3rem]">{batch.batchName}</h3>
                         <div className="mt-auto pt-3 flex gap-2">
-                          {isFeatured && batch.telegramLink ? (
-                            // Featured batch - Telegram button
-                            <a
-                              href={batch.telegramLink}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              onClick={(e) => e.stopPropagation()}
-                              className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold transition-all py-2.5 rounded-lg flex items-center justify-center gap-2"
-                            >
-                              <span className="text-lg">📢</span>
-                              <span>Join Telegram</span>
-                            </a>
-                          ) : (
-                            // Regular batch - Study button
-                            <button
-                              onClick={() => onSelect(batch.batchId, batch)}
-                              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold transition-all py-2.5 rounded-lg flex items-center justify-center gap-2"
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                              </svg>
-                              <span>Study</span>
-                            </button>
-                          )}
-                          
-                          {!isFeatured && (
-                            isEnrolled ? (
-                              <button
-                                onClick={(e) => toggleEnroll(batch.batchId, e)}
-                                className="flex-1 border-2 border-red-200 text-red-500 hover:bg-red-50 transition-all py-2.5 rounded-lg flex items-center justify-center gap-2 font-semibold"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                                <span>Unenroll</span>
-                              </button>
-                            ) : (
-                              <button
-                                onClick={(e) => toggleEnroll(batch.batchId, e)}
-                                className="flex-1 border-2 border-amber-300 text-amber-600 hover:bg-amber-50 transition-all py-2.5 rounded-lg flex items-center justify-center gap-2 font-semibold"
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                <span>Enroll</span>
-                              </button>
-                            )
-                          )}
+                          <button onClick={() => onSelect(batch.batchId, batch)} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg transition flex items-center justify-center gap-2">Study</button>
+                          <button onClick={(e) => toggleEnroll(batch.batchId, e)} className={`flex-1 border-2 py-2.5 rounded-lg font-semibold transition ${isEnrolled ? 'border-red-200 text-red-500' : 'border-amber-300 text-amber-600'}`}>{isEnrolled ? 'Unenroll' : 'Enroll'}</button>
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-
-              {/* Load More Button */}
               {!searchQuery && visibleCount < allBatchesToDisplay.length && (
                 <div className="flex justify-center mt-10">
-                  <button
-                    onClick={() => setVisibleCount(v => v + 15)}
-                    className="px-10 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold rounded-full text-base flex items-center gap-3 shadow-lg hover:shadow-indigo-500/30 transition-all"
-                  >
-                    Load More Batches
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
+                  <button onClick={() => setVisibleCount(v => v + 15)} className="px-10 py-4 bg-indigo-600 text-white font-bold rounded-full shadow-lg transition">Load More Batches</button>
                 </div>
               )}
             </>
@@ -1377,14 +1100,19 @@ export default function Home() {
     router.replace('/', undefined, { shallow: true });
   };
 
+  const handleBatchSelect = (batchId, batch) => {
+    const name = encodeURIComponent(batch?.batchName || batch?.name || '');
+    router.push(`/batch/${batchId}?name=${name}`);
+  };
+
   // Handle deep-link from /batch/[batchId] when a subject is clicked
   useEffect(() => {
-    const { batchId, batchName } = router.query;
+    const { batchId, name } = router.query;
     if (!batchId) return;
-    if (view.screen === 'subjects') return; // already loaded
+    if (view.screen === 'subjects' && view.batchId === batchId) return;
 
     setLoadingBatch(true);
-    const fakeBatch = { batchId, batchName: batchName ? decodeURIComponent(batchName) : batchId };
+    const fakeBatch = { batchId, batchName: name ? decodeURIComponent(name) : batchId };
 
     Promise.all([
       api(`/api/batchdetails?batchId=${batchId}`).catch(() => ({})),
@@ -1394,19 +1122,12 @@ export default function Home() {
       const arr = live?.data || live || [];
       setView({ screen: 'subjects', batchId, batch: fakeBatch, subjects, liveClasses: Array.isArray(arr) ? arr : [] });
     }).finally(() => setLoadingBatch(false));
-  }, [router.query]); // eslint-disable-line
-
-  const handleBatchSelect = (batchId, batch) => {
-    const name = encodeURIComponent(batch?.batchName || batch?.name || '');
-    router.push(`/batch/${batchId}?name=${name}`);
-  };
+  }, [router.query, view.screen, view.batchId]);
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Telegram Popup */}
-      <TelegramPopup />
-      
-      
+      {/* Telegram Popup (Temporarily Hidden) */}
+      {/* <TelegramPopup /> */}
 
       {loadingBatch && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
