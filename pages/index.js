@@ -889,21 +889,32 @@ function BatchesGrid({ onSelect }) {
                 console.log('🔓 Decrypted data sample:', decrypted.data);
                 
                 if (decrypted.success && decrypted.data) {
+                  // Log decrypted data for debugging
+                  console.log('🔓 Decrypted data content:', decrypted.data);
+
                   // Check if data is directly an array or nested in an object
-                  let allBatches = Array.isArray(decrypted.data) 
-                    ? decrypted.data 
-                    : (decrypted.data.data || decrypted.data.batches || []);
+                  let allBatches = [];
+                  if (Array.isArray(decrypted.data)) {
+                    allBatches = decrypted.data;
+                  } else if (decrypted.data && Array.isArray(decrypted.data.data)) {
+                    allBatches = decrypted.data.data;
+                  } else if (decrypted.data && Array.isArray(decrypted.data.batches)) {
+                    allBatches = decrypted.data.batches;
+                  } else if (decrypted.data && typeof decrypted.data === 'object') {
+                    // Try to find any array inside the object
+                    const possibleArray = Object.values(decrypted.data).find(val => Array.isArray(val));
+                    if (possibleArray) allBatches = possibleArray;
+                  }
                   
-                  console.log('📚 Extracted batches array:', Array.isArray(allBatches));
-                  console.log('📚 Total batches before filter:', allBatches.length);
+                  console.log('📚 Extracted batches array count:', allBatches.length);
                   
-                  if (!Array.isArray(allBatches) || allBatches.length === 0) {
+                  if (allBatches.length === 0) {
                     console.error('❌ No batches array found in decrypted data');
                     return;
                   }
                   
-                  // Filter out unwanted batches
-                  const excludeKeywords = ['nsat', 'pw-sat', 'summer camp', 'test series'];
+                  // Filter removed or made very loose
+                  const excludeKeywords = ['test-only-filter'];
                   allBatches = allBatches.filter(batch => {
                     const name = (batch.batchName || '').toLowerCase();
                     return !excludeKeywords.some(keyword => name.includes(keyword));
@@ -1364,34 +1375,10 @@ export default function Home() {
     router.replace('/', undefined, { shallow: true });
   };
 
-  // Handle deep-link from /batch/[batchId] when a subject is clicked
-  useEffect(() => {
-    const { batchId, batchName } = router.query;
-    if (!batchId) return;
-    if (view.screen === 'subjects') return; // already loaded
-
-    setLoadingBatch(true);
-    const fakeBatch = { batchId, batchName: batchName ? decodeURIComponent(batchName) : batchId };
-
-    Promise.all([
-      api(`/api/batchdetails?batchId=${batchId}`).catch(() => ({})),
-      api(`/api/live?batchId=${batchId}`).catch(() => []),
-    ]).then(([d, live]) => {
-      const subjects = d?.data?.subjects || d?.subjects || [];
-      const arr = live?.data || live || [];
-      setView({ screen: 'subjects', batchId, batch: fakeBatch, subjects, liveClasses: Array.isArray(arr) ? arr : [] });
-    }).finally(() => setLoadingBatch(false));
-  }, [router.query]); // eslint-disable-line
-
-  const handleBatchSelect = (batchId, batch) => {
-    const name = encodeURIComponent(batch?.batchName || batch?.name || '');
-    router.push(`/batch/${batchId}?name=${name}`);
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Telegram Popup */}
-      <TelegramPopup />
+      {/* Telegram Popup Hidden for now */}
+      {/* <TelegramPopup /> */}
       
       
 
